@@ -7,7 +7,15 @@ console: Console = Console()
 
 
 EXPECTED_COLORS = [12, 13, 14]
-valid_games_buff = []
+curr_minimum_balls_list = [0, 0, 0]
+minimum_game_balls_result_list = []
+
+
+def get_power(balls_list: list[int]) -> int:
+    result = balls_list[0]
+    for i in range(1, 3):
+        result *= balls_list[i]
+    return result
 
 
 def round_list_insert_non_specified(round_list: list[str]) -> list[str]:
@@ -32,17 +40,17 @@ def get_balls_list_from_game_case(game_case: str) -> list[int]:
 
 
 def run_for_each_game(game_id: int, game_str: str) -> None:
-    is_curr_game_valid = True
-
     for game_round in game_str.split(';'):
         balls_list = get_balls_list_from_game_case(game_round.strip())
 
         for i in range(3):
-            if balls_list[i] > EXPECTED_COLORS[i]:
-                is_curr_game_valid = False
+            if balls_list[i] > curr_minimum_balls_list[i]:
+                curr_minimum_balls_list[i] = balls_list[i]
 
-    if is_curr_game_valid:
-        valid_games_buff.append(game_id)
+    minimum_game_balls_result_list.append(get_power(curr_minimum_balls_list))
+
+    for i in range(3):
+        curr_minimum_balls_list[i] = 0
 
 
 def solution(data: list[str]) -> None:
@@ -51,8 +59,8 @@ def solution(data: list[str]) -> None:
         run_for_each_game(game_index + 1, game_str)
 
     print()  #display all results!
-    console.log(f'[green]valid: {valid_games_buff}')
-    console.log(f'[green]  sum: {sum(valid_games_buff)}\n')
+    console.log(f'[green]valid: {minimum_game_balls_result_list}')
+    console.log(f'[green]  sum: {sum(minimum_game_balls_result_list)}\n')
 
 
 def main(input: str) -> None:
@@ -64,37 +72,3 @@ def main(input: str) -> None:
 
 if __name__ == '__main__':
     main(argv[1])
-
-
-# CODE GORE
-# content: list[str] = _map(content,
-#     lambda game: game.split(':')[1].strip())
-# data_base: list[list[str]] = _map(content,
-#     lambda game_info: _map(game_info.split(';'),
-#         lambda info: info.strip()))
-# data_mid: list[list[list[str]]] = _map(data_base,
-#     lambda info_list: _map(info_list,
-#         lambda info_str: info_str.split(',')))
-# data_mid = _map(data_mid,
-#     lambda game_list: _map(game_list,
-#         lambda game_case: _map(game_case,
-#             lambda case_info: ' '.join(case_info.split(' ')[::-1]))))
-# for color in ['red', 'green', 'blue']:
-#     data_mid = _map(data_mid,
-#         lambda game_list: _map(game_list,
-#             lambda game_case:
-#                 game_case + [f'{color} 0'] if _find(game_case, color) < 0
-#                                       else game_case))
-# data_mid = _map(data_mid,
-#     lambda game_list: _map(game_list,
-#         lambda game_case: sorted(game_case)[::-1]))
-# data_mid = _map(data_mid,
-#     lambda game_list: _map(game_list,
-#         lambda game_case: _map(game_case,
-#             lambda case_info: _smap(case_info,
-#                 lambda char: char if char.isdigit()
-#                                   else ''))))
-# data: list[list[int]] = _map(data_mid,
-#     lambda game_list: _map(game_list,
-#         lambda game_case: _map(game_case,
-#             lambda case_info: int(case_info))))
