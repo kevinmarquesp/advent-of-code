@@ -3,15 +3,24 @@
 ## searched: https://stackoverflow.com/questions/33045222/how-do-you-alias-a-type-in-python#33045252
 ## searched: https://duckduckgo.com/?t=lm&q=python+typehints+lambda+function&ia=web
 
-from collections.abc import Callable
+from dataclasses import dataclass
 from sys import argv
-from typing import Any
 from rich.console import Console
+from typing import Callable, Any
 
-console = Console()
-log = console.log
 
-ScratchCard = tuple[list[int], list[int]]
+class Debug:
+    console: Console = Console()
+
+
+    @staticmethod
+    def print(log_str) -> None:
+        Debug.console.print(log_str)
+
+
+    @staticmethod
+    def display_solution(log_str) -> None:
+        Debug.console.print(f'SOLUTION 💡 {log_str}')
 
 
 class Utils:
@@ -19,66 +28,78 @@ class Utils:
     def map(function: Callable[[Any], Any], array: list[Any]):
         return list(map(function, array))
 
+
     @staticmethod
     def filter(function: Callable[[Any], bool], array: list[Any]):
         return list(filter(function, array))
 
 
-def process_card_info(card_str_info: str) -> ScratchCard:
-    filtered_card_str_info = card_str_info[card_str_info.index(':') + 1:]  #remove the unwanted card number information
-
-    card_str_info_data = Utils.map(lambda str_nums: str_nums.strip(),
-                                   filtered_card_str_info.split('|'))
-    player_numbers_str = Utils.filter(lambda str_num: len(str_num) > 0,
-                                      [str_num for str_num in card_str_info_data[0].split(' ')])
-    winner_numbers_str = Utils.filter(lambda str_num: len(str_num) > 0,
-                                      [str_num for str_num in card_str_info_data[1].split(' ')])
-
-    return (Utils.map(int, player_numbers_str), Utils.map(int, winner_numbers_str))
+@dataclass
+class ScratchCard:
+    ID: int
+    PLAYER_NUMS: list[int]
+    WINNER_NUMS: list[int]
+    ammount: int
 
 
-def calculate_total_card_points(winners_count: int) -> int:
-    if winners_count <= 0:
-        return 0
-
-    total_points = 1
-
-    for _ in range(1, winners_count):
-        total_points *= 2
-
-    return total_points
+class AdventOfCode:
+    puzzle_input: list[str]
+    SCRATCH_CARDS: list[ScratchCard]
 
 
-def execute_for_each_card_game(card: ScratchCard) -> int:  #note: *1
-    player_nums, winner_nums = card
-    valid_winners_count = 0
-    total_points = 0
-
-    for p_num in player_nums:
-        if p_num in winner_nums:
-            valid_winners_count += 1
-
-    total_points = calculate_total_card_points(valid_winners_count)
-
-    return total_points
+    def __init__(self, puzzle_input: list[str]) -> None:
+        self.puzzle_input = puzzle_input
+        self.SCRATCH_CARDS = [self.__process_game_data_string(game_data_str)
+                              for game_data_str in self.puzzle_input]
 
 
-def solve_puzzle(cards_info_list: list[str]) -> None:
-    cards_list = [process_card_info(card_info) for card_info in cards_info_list]
-    total_points = 0
+    def solve(self) -> int:
+        for card in self.SCRATCH_CARDS:
+            card_points = self.__get_card_points(card)
+            copy_cards_ids = [poit_counter + card.ID
+                              for poit_counter in range(1, card_points + 1)]
 
-    for card in cards_list:  #note(1): maybe it should has the keys also
-        game_total_points = execute_for_each_card_game(card)
-        total_points += game_total_points
+            for copy_card_id in copy_cards_ids * card.ammount:
+                self.SCRATCH_CARDS[copy_card_id - 1].ammount += 1
 
-    log(total_points)
+        return sum(Utils.map(lambda card: card.ammount,
+                             self.SCRATCH_CARDS))
+
+
+    def __get_card_points(self, card: ScratchCard) -> int:
+        counter = 0
+
+        for player_num in card.PLAYER_NUMS:
+            if player_num in card.WINNER_NUMS:
+                counter += 1
+
+        return counter
+
+
+    def __process_game_data_string(self, game_data_str) -> ScratchCard:
+        get_numbers_list = lambda nums_list_str: Utils.map(int, Utils.filter(lambda num_str: len(num_str) > 0,
+                                                                             nums_list_str.split(' ')))
+
+        comma_pos = game_data_str.index(':')
+        right_data = game_data_str[comma_pos + 1:] #after the : character
+
+        card_id = int(game_data_str[:comma_pos].split(' ')[-1])
+
+        player_nums = get_numbers_list(right_data.split('|')[0])
+        winner_nums = get_numbers_list(right_data.split('|')[1])
+
+        return ScratchCard(ID=card_id, PLAYER_NUMS=player_nums, WINNER_NUMS=winner_nums, ammount=1)
 
 
 def main(file_path: str) -> None:
     with open(file_path, 'r') as file:
         file_content = list(map(lambda line: line.replace('\n', ''),
                                 file.readlines()))
-        solve_puzzle(file_content)
+
+        advent_of_code = AdventOfCode(file_content)
+        solution = advent_of_code.solve()
+        Debug.display_solution(solution)
+
 
 if __name__ == '__main__':
     main(argv[1])
