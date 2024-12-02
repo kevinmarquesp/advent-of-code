@@ -31,11 +31,24 @@ def is_report_valid(report: list[int]) -> bool:
 
 
 def solve(inp: str) -> int:
-    """Returns the ammount of valid reports."""
+    """Validate each possivle variant for each report and sum the valids."""
     reports = get_report_list(inp)
-    vals = [is_report_valid(report) for report in reports]
+    results = []
 
-    return vals.count(True)
+    for report in reports:
+        variants = [report]
+
+        for key in range(len(report)):
+            variant = report.copy()
+            del variant[key]
+
+            variants.append(variant)
+
+        is_valid = True in [is_report_valid(variant) for variant in variants]
+
+        results.append(is_valid)
+
+    return results.count(True)
 
 
 def main() -> None:
