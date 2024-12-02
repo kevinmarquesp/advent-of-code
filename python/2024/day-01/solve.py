@@ -19,19 +19,19 @@ def separate_lists(inp: str) -> tuple[list[int], list[int]]:
 
 
 def solve(inp: str) -> int:
-    """Sum the difference between each numer when the lists are sorted."""
+    """Maps each appearence of the left in the right and sum the scores."""
     left, right = separate_lists(inp)
 
     assert len(left) == len(right), "Invalid input, column sizes doesn't match"
 
-    comp = []
+    acc = []
 
-    for key in range(len(left)):
-        diff = abs(left[key] - right[key])
+    for num in left:
+        count = right.count(num)
 
-        comp.append(diff)
+        acc.append(num * count)
 
-    return sum(comp)
+    return sum(acc)
 
 
 def main() -> None:
