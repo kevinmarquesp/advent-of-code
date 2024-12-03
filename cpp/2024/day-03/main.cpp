@@ -1,14 +1,11 @@
-#include <algorithm>
 #include <fstream>
 #include <iostream>
-#include <iterator>
 #include <numeric>
 #include <ostream>
 #include <ranges>
 #include <regex>
 #include <sstream>
 #include <string>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -93,14 +90,31 @@ auto _run_inst(std::string const &str) -> int {
   return left * right;
 }
 
-/*! Find each instruction with regex and then accumulate the results. */
+/*! Removes the unecessary chars and iterate to multiply only the valids. */
 auto solve(std::string const input) -> int {
-  auto instructions =
-      utils::str_findall(input, std::regex(R"(mul\([0-9]+,[0-9]+\))"));
+  // Removes the unecesary characters before processing the statements.
+  auto instructions = utils::str_findall(
+      input, std::regex(R"((do\(\)|don't\(\)|mul\(\d+,\d+\)))"));
 
-  auto results =
-      instructions | std::ranges::views::transform(
-                         [](auto const &inst) { return _run_inst(inst); });
+  // Removes every "don't()"'s, "do()"'s and everything in between.
+  bool is_enabled = true;
+  auto filtered_instructions =
+      instructions | std::ranges::views::filter([&](auto const &inst) {
+        if (inst == "do()")
+          is_enabled = true;
+
+        if (inst == "don't()")
+          is_enabled = false;
+
+        if (inst == "don't()" || inst == "do()")
+          return false;
+
+        return is_enabled;
+      });
+
+  auto results = filtered_instructions |
+                 std::ranges::views::transform(
+                     [](auto const &inst) { return _run_inst(inst); });
 
   return std::accumulate(results.begin(), results.end(), 0);
 }
