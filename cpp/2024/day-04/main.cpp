@@ -1,8 +1,5 @@
-#include <cstdint>
 #include <fstream>
-#include <functional>
 #include <iostream>
-#include <numeric>
 #include <ostream>
 #include <ranges>
 #include <regex>
@@ -81,8 +78,8 @@ auto str_findall(std::string str, std::regex const exp)
 } // namespace utils
 
 /*! Returns a vector of pairs (line and char pos) given a canvas and a char. */
-auto _find_x_positions(std::vector<std::string> const &game,
-                       char const target = 'X')
+auto _find_a_positions(std::vector<std::string> const &game,
+                       char const target = 'A')
     -> std::vector<std::pair<int, int>> {
   auto x_positions = std::vector<std::pair<int, int>>();
 
@@ -98,85 +95,41 @@ auto _find_x_positions(std::vector<std::string> const &game,
   return x_positions;
 }
 
-/*! Given a canvas and a positions, it'll find all N-lenght words around. */
-auto _find_local_words(std::vector<std::string> const &game,
-                       std::pair<int, int> const &pos, uint32_t const w_lenght)
-    -> std::vector<std::string> {
-  auto result = std::vector<std::string>();
+/*! Given a canvas and a positions vec, check the corners looking for a MAS. */
+auto _is_pos_mas(std::vector<std::string> const &game,
+                 std::pair<int, int> const &position) -> bool {
+  auto [line_pos, chr_pos] = position;
 
-  auto [line_pos, chr_pos] = pos;
-  std::string buff = game[line_pos].substr(chr_pos, 1);
-  std::vector<std::pair<std::function<int(int)>, std::function<int(int)>>>
-      actions = {
-          // Top left.
-          std::make_pair([](int lp) { return lp - 1; },
-                         [](int cp) { return cp - 1; }),
-          // Top.
-          std::make_pair([](int lp) { return lp - 1; },
-                         [](int cp) { return cp; }),
-          // Top right.
-          std::make_pair([](int lp) { return lp - 1; },
-                         [](int cp) { return cp + 1; }),
-          // Left.
-          std::make_pair([](int lp) { return lp; },
-                         [](int cp) { return cp - 1; }),
-          // Right.
-          std::make_pair([](int lp) { return lp; },
-                         [](int cp) { return cp + 1; }),
-          // Bottom left.
-          std::make_pair([](int lp) { return lp + 1; },
-                         [](int cp) { return cp - 1; }),
-          // Bottom.
-          std::make_pair([](int lp) { return lp + 1; },
-                         [](int cp) { return cp; }),
-          // Bottom right.
-          std::make_pair([](int lp) { return lp + 1; },
-                         [](int cp) { return cp + 1; }),
-      };
+  if (line_pos - 1 < 0 || line_pos + 1 >= game.size() || chr_pos - 1 < 0 ||
+      chr_pos + 1 >= game[0].size())
+    return false;
 
-  for (auto const &act : actions) {
-    for (int i = 1; i < w_lenght; ++i) {
-      line_pos = act.first(line_pos);
-      chr_pos = act.second(chr_pos);
+  int mas_count = 0;
 
-      if (line_pos < 0 || chr_pos < 0 || line_pos >= game.size() ||
-          chr_pos >= game[0].size())
-        break;
+  if ((game[line_pos - 1][chr_pos - 1] == 'M' &&
+       game[line_pos + 1][chr_pos + 1] == 'S') ||
+      (game[line_pos - 1][chr_pos - 1] == 'S' &&
+       game[line_pos + 1][chr_pos + 1] == 'M'))
+    mas_count++;
+  if ((game[line_pos - 1][chr_pos + 1] == 'M' &&
+       game[line_pos + 1][chr_pos - 1] == 'S') ||
+      (game[line_pos - 1][chr_pos + 1] == 'S' &&
+       game[line_pos + 1][chr_pos - 1] == 'M'))
+    mas_count++;
 
-      buff.push_back(game[line_pos][chr_pos]);
-    }
-
-    if (buff.size() == w_lenght)
-      result.push_back(buff);
-
-    line_pos = pos.first;
-    chr_pos = pos.second;
-    buff = game[line_pos].substr(chr_pos, 1);
-  }
-
-  return result;
+  return mas_count >= 2;
 }
 
-/*! Find each 'X' pos and generates a list of all words possible to filter. */
+/*! Find each 'A' pos to validate them all, them filter the valids and count. */
 auto solve(std::string const input) -> int {
   auto const game = utils::str_split(input, "\n");
-  auto const words_matrix = _find_x_positions(game) |
-                            std::ranges::views::transform([&](auto const &pos) {
-                              return _find_local_words(game, pos, 4);
-                            });
-  auto results = std::vector<std::string>();
 
-  for (auto const &words : words_matrix)
-    for (auto const &word : words)
-      results.push_back(word);
-
-  auto const filtered_results =
-      results | std::ranges::views::filter([](auto const &word) {
-        return word == "XMAS";
-      }) |
-      std::ranges::to<std::vector<std::string>>();
-
-  return filtered_results.size();
+  return (_find_a_positions(game) |
+          std::ranges::views::transform(
+              [game](auto const &pos) { return _is_pos_mas(game, pos); }) |
+          std::ranges::views::filter([](auto const &res) { return res; }) |
+          std::ranges::to<std::vector<bool>>())
+      .size();
 }
 
 /*! Boilerplate to open the input file path given in the CLI argumetns. */
