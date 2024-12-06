@@ -5,10 +5,10 @@ import fs from "node:fs";
 /**
  * Get the guard position in the map.
  * @param {string} input 
- * @returns {number[]}
+ * @returns {{ line: number; col: number; }}
  */
 function getGuardPos(input) {
-  const line = input
+  const row = input
     .split("")
     .filter((char) =>
       ["^", "\n"].includes(char))
@@ -16,106 +16,106 @@ function getGuardPos(input) {
     .indexOf("^")
 
   const col = input
-    .split("\n")[line]
+    .split("\n")[row]
     .indexOf("^");
 
-  return [line, col];
+  return { row, col };
 }
 
 /**
- * Givin a guard position, it will drawn an X line where she's poiting to.
- * @param {string[][]} map 
- * @param {number[]} guardPos
- * @returns {{ map: string[][]; guardPos: number[], isOut: boolean }}
+ * Returns the path positions of the guard or null if a loop was found.
+ * @param {string[][]} grid 
+ * @param {{ row: number; col: number; }} current 
+ * @param {string} direction 
+ * @returns {{ row: number; col: number; }[]}
  */
-function drawnDirectedLine(map, guardPos) {
-  const [guardLine, guardCol] = guardPos;
-  const direction = map[guardLine][guardCol];
-
-  if (!["^", ">", "v", "<"].includes(direction))
-    throw "Invalid guard position";
-
-  const getNextPos =
-    direction === "^" ? (li, co) => [li - 1, co] :
-      direction === ">" ? (li, co) => [li, co + 1] :
-        direction === "v" ? (li, co) => [li + 1, co] :
-          direction === "<" ? (li, co) => [li, co - 1] : null;
-  const nextDirection =
-    direction === "^" ? ">" :
-      direction === ">" ? "v" :
-        direction === "v" ? "<" :
-          direction === "<" ? "^" : null;
-
-  const updatedMap = [...map.map((l) => [...l])];
-  let currentPos = guardPos;
+function getGuardPath(grid, current, direction) {
+  let acc = [];
 
   while (true) {
-    const [line, col] = currentPos;
-    const [nextLine, nextCol] = getNextPos(line, col);
-
-    updatedMap[line][col] = "X";
-
-    try {
-      if (updatedMap[nextLine][nextCol] === "#") {
-        updatedMap[line][col] = nextDirection;
-
-        return { map: updatedMap, guardPos: [line, col], isOut: false };
-      }
-
-      currentPos = [nextLine, nextCol];
-
-    } catch (_) {
-      return { map: updatedMap, guardPos: [line, col], isOut: true };
+    const directions = {
+      "^": { next: { row: current.row - 1, col: current.col }, turn: ">" },
+      ">": { next: { row: current.row, col: current.col + 1 }, turn: "v" },
+      "v": { next: { row: current.row + 1, col: current.col }, turn: "<" },
+      "<": { next: { row: current.row, col: current.col - 1 }, turn: "^" },
     }
-  }
-}
 
-/**
- * Iterate over all guard movements and mark the path with X's along the way.
- * @param {string[][]} map 
- * @param {number[]} guardPos 
- * @returns {{ markedMap: string[][]; lastGuardPos: number[]; }}
- */
-function markGuardsPath(map, guardPos) {
-  let markedMap = [...map.map((l) => [...l])];
-  let lastGuardPos = [...guardPos];
+    if (acc.length >= 6) {
+      const [tail, head] = [acc.slice(2, -2), acc.slice(-2)];
 
-  while (true) {
-    const data = drawnDirectedLine(markedMap, lastGuardPos);
+      if (tail.some((curr, idx, arr) => {
+        if (idx === 0)
+          return false;
 
-    markedMap = data.map;
-    lastGuardPos = data.guardPos;
+        const prev = arr[idx - 1];
 
-    if (data.isOut)
+        return (
+          head[0].row === prev.row && head[0].col === prev.col &&
+          head[1].row === curr.row && head[1].col === curr.col
+        )
+      }))
+        return null;
+    }
+
+    const { next: { row, col }, turn } = directions[direction];
+
+    if (row < 0 || row >= grid.length || col < 0 || col >= grid[0].length) {
+      acc.push(current);
       break;
+    }
+
+    const target = grid[row][col];
+
+    if (!"^>v<.X".includes(target)) {
+      direction = turn;
+
+      continue;
+    }
+
+    acc.push(current);
+
+    current = { row, col };
   }
 
-  return { markedMap, lastGuardPos };
+  return acc;
 }
 
 /**
- * Drawns the guard's path with X's and just cound them all.
+ * For each position in the guards path, put an obstacle and count if it loops.
  * @param {string} input 
  * @returns {number}
  */
 function solve(input) {
-  let map = input.split("\n").map((l) => l.split(""));
-  let guardPos = getGuardPos(input);
+  const guard = getGuardPos(input);
+  const grid = input.split("\n").map((line) => line.split(""));
 
-  const { markedMap } = markGuardsPath(map, guardPos);
+  // This massive line get all unique positions in the guard's path.
+  const [_, ...path] = getGuardPath(grid, guard, "^")
+    .map(({ row, col }) => `${row},${col}`)
+    .filter((pos, key, arr) => arr.indexOf(pos) === key)
+    .map((pos) => pos.split(",").map(Number))
+    .map(([row, col]) => ({ row, col }))
 
-  return markedMap
-    .map((line) => line.join(""))
-    .join("")
-    .split("")
-    .filter((char) => char === "X")
-    .length;
+  let count = 0;
+
+  path.forEach(({ row, col }) => {
+    const temp = grid[row][col];
+
+    grid[row][col] = "O";  // Put an obstacle
+
+    if (getGuardPath(grid, guard, "^") === null)
+      count++;
+
+    grid[row][col] = temp;  // Removes the obstacle
+  })
+
+  return count;
 }
 
 const inputPath = process.argv[2];
 
 if (!inputPath) {
-  throw "Input file argument required";
+  throw new Error("Input file argument required");
 }
 
 fs.readFile(inputPath, "utf8", (error, input) => {
