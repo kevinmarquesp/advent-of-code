@@ -32,7 +32,17 @@ defmodule Solution do
   Place all operation combinations to calculate, return true if it equals the value.
   """
   def is_valid?(value, [head | tail] = nums) do
-    List.duplicate([&+/2, &*/2], length(nums) - 1)
+    List.duplicate(
+      [
+        &+/2,
+        &*/2,
+        fn left, right ->
+          (Integer.to_string(left) <> Integer.to_string(right))
+          |> String.to_integer()
+        end
+      ],
+      length(nums) - 1
+    )
     |> product()
     |> Enum.reduce_while(nil, fn operators, _ ->
       calc =
