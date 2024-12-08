@@ -1,6 +1,9 @@
 #!/usr/bin/env elixir
 
 defmodule Solution do
+  @doc """
+  Uses the cartesian product algorithm to filter the valid ones then sum the values.
+  """
   def solve(input) when is_bitstring(input) do
     String.split(input, "\n")
     |> Enum.map(&String.split(&1, ": "))
@@ -14,74 +17,47 @@ defmodule Solution do
     |> solve()
   end
 
-  @doc """
-  Uses multiple proccess to count only the valid lines (filter then reduce).
-  """
   def solve(input) when is_list(input) do
-    input
-    |> Task.async_stream(
-      &is_equation_valid?/1,
-      max_concurrency: System.schedulers_online(),
-      timeout: :infinity
-    )
-    |> Enum.filter(fn {:ok, {_, result}} -> result end)
-    |> Enum.reduce(0, fn {:ok, {num, _}}, acc -> acc + num end)
+    Enum.filter(input, fn {value, nums} ->
+      IO.inspect({value, nums}, label: "Debug", charlists: :as_lists)
+
+      is_valid?(value, nums)
+    end)
+    |> Enum.reduce(0, fn {value, _}, acc -> acc + value end)
+
+    # |> IO.inspect(label: "Debug", charlists: :as_lists)
   end
 
   @doc """
-  Iterate over each operation combinations to check if it's valid
+  Place all operation combinations to calculate, return true if it equals the value.
   """
-  def is_equation_valid?({target, nums}) do
-    IO.inspect({target, nums})
-
-    # Start by iterating over each incremental combos.
-    incremental_combinations(&+/2, &*/2, length(nums) - 1)
-    |> Enum.reduce_while(nil, fn ops_comb, _ ->
-      # Now get all unique positions that this increment combo can have.
-      next_action =
-        permutations(ops_comb)
-        |> Enum.reduce_while(nil, fn ops, _ ->
-          if apply_operations(nums, ops) === target do
-            {:halt, :halt}
-          else
-            {:cont, :cont}
-          end
+  def is_valid?(value, [head | tail] = nums) do
+    List.duplicate([&+/2, &*/2], length(nums) - 1)
+    |> product()
+    |> Enum.reduce_while(nil, fn operators, _ ->
+      calc =
+        Enum.zip(operators, tail)
+        |> Enum.reduce(head, fn {opr, num}, acc ->
+          opr.(acc, num)
         end)
 
-      # If the previous reduce_while halts, it means that it is valid!
-      {next_action, {target, next_action === :halt}}
+      if calc === value do
+        {:halt, true}
+      else
+        {:cont, false}
+      end
     end)
   end
 
   @doc """
-  Giving a list of numbers and another of operations, reduce the result of them.
+  Returns the cartesian product matrix given a 2D matrix of any type/length.
+  Adpated from: https://elixirforum.com/t/taking-cross-products-of-two-or-more-lists/35631
   """
-  def apply_operations([first | rest], ops) do
-    Enum.zip(ops, rest)
-    |> Enum.reduce(first, fn {op, num}, acc ->
-      op.(acc, num)
-    end)
-  end
+  def product([head]), do: Enum.map(head, &[&1])
 
-  @doc """
-  """
-  def incremental_combinations(main, alt, 1), do: [[main], [alt]]
-
-  def incremental_combinations(main, alt, size) do
-    0..size
-    |> Enum.map(fn ammount ->
-      List.duplicate(alt, ammount) ++ List.duplicate(main, size - ammount)
-    end)
-  end
-
-  @doc """
-  Elixir hack to get all possible permutations givin an enumerable.
-  """
-  def permutations([]), do: [[]]
-
-  def permutations(list) do
-    for elem <- list, rest <- permutations(list -- [elem]), uniq: true do
-      [elem | rest]
+  def product([head | tail]) do
+    for first <- head, b <- product(tail) do
+      [first | b]
     end
   end
 end
