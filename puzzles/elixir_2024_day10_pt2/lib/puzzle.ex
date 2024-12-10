@@ -1,14 +1,17 @@
 defmodule Puzzle do
   @moduledoc """
-  TODO: Describe your logic to solve this puzzle, you know, it's fun to share!
+  Find the 0's positions and apply the trailheads algorithm for each of them.
+  The results for that algorithm should be a list of 9's positions, where if the
+  repeated positions indicate that the provided starter position has multiple
+  paths for the same destination (the cells with the number 9).
+
+  Take the length of those results to get the total paths to a 9 that each 0
+  position has, the answer should be the sum of those values.
   """
 
   alias Puzzle.Helpers.Algorithms
 
-  @doc """
-  Parses the input file's content to a struct that Elixir can work with before
-  doing the steps to solve it.
-  """
+  @doc "Parses the raw file content string to a list/tuple before solving it."
   def solve(raw) when is_bitstring(raw) do
     String.split(raw, "\n")
     |> Enum.map(fn line ->
@@ -29,6 +32,7 @@ defmodule Puzzle do
     end
     |> Enum.map(fn pos ->
       Algorithms.find_trailheads(grid, pos, {max_row, max_col})
+      # This map is necessary because of a performance implementation...
       |> Enum.map(& &1)
       |> length()
     end)

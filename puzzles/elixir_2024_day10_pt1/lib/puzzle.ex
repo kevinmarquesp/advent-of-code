@@ -1,14 +1,18 @@
 defmodule Puzzle do
   @moduledoc """
-  TODO: Describe your logic to solve this puzzle, you know, it's fun to share!
+  Lists all positions (row and column indexes) where a 0 can be found. The runs
+  the trailheads algorithm for each position, resulting in a bunch of lists with
+  the possible destinations (each should be a 9 in the grid).
+
+  Not all that information is relevant, so to solve it needs to filter the
+  repeated positions for each result (I want to count the destinations and not
+  all possibilies for destinations). Finally, take the length for each result
+  and sum it all up to get the answer.
   """
 
   alias Puzzle.Helpers.Algorithms
 
-  @doc """
-  Parses the input file's content to a struct that Elixir can work with before
-  doing the steps to solve it.
-  """
+  @doc "Parses the raw file content string to a list/tuple before solving it."
   def solve(raw) when is_bitstring(raw) do
     String.split(raw, "\n")
     |> Enum.map(fn line ->
