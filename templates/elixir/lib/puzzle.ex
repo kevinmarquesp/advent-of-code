@@ -3,10 +3,9 @@ defmodule Puzzle do
   TODO: Describe your logic to solve this puzzle, you know, it's fun to share!
   """
 
-  @doc """
-  Parses the input file's content to a struct that Elixir can work with before
-  doing the steps to solve it.
-  """
+  alias Puzzle.Helpers.Algorithms
+
+  @doc "Parses the raw file content string to a list/tuple before solving it."
   def solve(raw) when is_bitstring(raw) do
     # TODO: Parse the content string...
 
